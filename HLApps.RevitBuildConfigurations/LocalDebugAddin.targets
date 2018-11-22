@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <Target
+    Name="PostBuildEvent"
+    Condition="'$(PostBuildEvent)'!=''"
+    DependsOnTargets="$(PostBuildEventDependsOn)">
+  <Exec WorkingDirectory="$(OutDir)" Command="$(PostBuildEvent)" IgnoreExitCode="true" />
+ </Target>
+  
+  <Target
+    Name="PreBuildEvent"
+    Condition="'$(PreBuildEvent)'!=''"
+    DependsOnTargets="$(PreBuildEventDependsOn)">
+  <Exec WorkingDirectory="$(OutDir)" Command="$(PreBuildEvent)" IgnoreExitCode="true" />
+ </Target>
+  
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'RV2018Debug|x64'">
+    <PostBuildEvent>xcopy /y "$(TargetDir)*.dll" "C:\ProgramData\Autodesk\Revit\Addins\2018\HLApps.Revit\"</PostBuildEvent>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'RV2019Debug|x64'">
+    <PostBuildEvent>xcopy /y "$(TargetDir)*.dll" "C:\ProgramData\Autodesk\Revit\Addins\2019\HLApps.Revit\"</PostBuildEvent>
+  </PropertyGroup>
+    
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'RV2018Debug|x64'">
+    <PreBuildEvent>xcopy /y/S "$(SolutionDir)HLApps.Revit.Graph.UIAddin\HLApps.Revit.Graph.addin" "C:\ProgramData\Autodesk\Revit\Addins\2018\"</PreBuildEvent>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'RV2019Debug|x64'">
+    <PreBuildEvent>xcopy /y/S "$(SolutionDir)HLApps.Revit.Graph.UIAddin\HLApps.Revit.Graph.addin" "C:\ProgramData\Autodesk\Revit\Addins\2019\"</PreBuildEvent>
+  </PropertyGroup>
+
+    
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'RV2018Debug|x64'">
+    <StartAction>Program</StartAction>
+    <StartProgram>C:\Program Files\Autodesk\Revit 2018\Revit.exe</StartProgram>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'RV2019Debug|x64'">
+    <StartProgram>C:\Program Files\Autodesk\Revit 2019\Revit.exe</StartProgram>
+    <StartAction>Program</StartAction>
+  </PropertyGroup>
+
+</Project>
