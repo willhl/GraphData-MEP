@@ -137,10 +137,10 @@ Open CypherToPowerBI.pbix, or, use the following Power Query (paste into the Adv
         ExpandAllQuandl
 
 These are the parameters for the power query:
-neo4jHost = host name with http protocol (e.g. http:\\\localhost)
-neo4jPort = Neo4j http port (7474)
-neo4jAuth = Base64 encoded username:password, (e.g. bmVvNGo6cGFzc3dvcmQ=)
-CypherQuery = The cypher query (must return fields only, and not nodes)
+ - neo4jHost = host name with http protocol (e.g. http:\\\localhost)
+ - neo4jPort = Neo4j http port (7474)
+ - neo4jAuth = Base64 encoded username:password, (e.g. bmVvNGo6cGFzc3dvcmQ=)
+ - CypherQuery = The cypher query (must return fields only, and not nodes)
 
 ## Todo
 ---
@@ -165,6 +165,7 @@ This sample is not a complete implementation and there are many opportunities fo
  - Add progress bars to inform status of long running processes
  - Persist user settings
  - Error handling and logging
+ - Set window owner to Revit window handle
 
 # Licence
 ___
