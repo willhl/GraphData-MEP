@@ -63,7 +63,12 @@ namespace HLApps.Revit.Graph.Parsers
                 scannedElements.Add(currentElement.Id.IntegerValue);
 
                 ConnectorManager currentCm = Utils.MEPUtils.GetConnectionManager(currentElement);
-                if (currentCm == null) continue;
+
+                if (currentCm == null)
+                {
+                    ScanSpacesFromElement(currentElement, graph, scannedElements);
+                    return;
+                }
 
                 var connStack = new Stack<Connector>();
                 foreach (var conn in currentCm.Connectors.OfType<Connector>().Where(cn => cn.ConnectorType == ConnectorType.End || cn.ConnectorType == ConnectorType.Curve))// && !previouseConnections.Any(pc => pc.IsConnectedTo(cn))))
@@ -197,6 +202,16 @@ namespace HLApps.Revit.Graph.Parsers
                             var length = Math.Abs(orgPoint.DistanceTo(nextOrigin));
                             //very crude way to get length, should really be using MEPSection
                             if (length >= 0.1) edge.Length = length;
+
+                            var height = Math.Abs(orgPoint.Z - nextOrigin.Z);
+                            if (edge.AsNodeEdge.ExtendedProperties.ContainsKey("Height"))
+                            {
+                                edge.AsNodeEdge.ExtendedProperties["Height"] = height;
+                            }
+                            else
+                            {
+                                edge.AsNodeEdge.ExtendedProperties.Add("Height", height);
+                            }
                         }
                     }
 
@@ -413,64 +428,105 @@ namespace HLApps.Revit.Graph.Parsers
         {
             var doc = elm.Document;
 
+            var gpNode = graph.AddElement(elm, true);
+
             if (elm is FamilyInstance) //elm.Category.Id.IntegerValue == (int)BuiltInCategory.OST_DuctTerminal || elm.Category.Id.IntegerValue == (int)BuiltInCategory.OST_MechanicalEquipment)
             {
                 var fi = elm as FamilyInstance;
                 var org = (elm.Location as LocationPoint).Point;
                 var pos = (elm.Location as LocationPoint).Point;
+      
+                if (fi.HasSpatialElementCalculationPoint)
+                {
+                    pos = fi.GetSpatialElementCalculationPoint();
+                }
 
-                var phase = doc.GetElement(elm.CreatedPhaseId) as Phase;
-                var sp = elm.Document.GetSpaceAtPoint(pos, phase);
                 Level lvl = null;
+                var phase = doc.GetElement(elm.CreatedPhaseId) as Phase;
 
+                var sp = fi.Space;
+              
                 if (sp == null)
+                {
+                    sp = elm.Document.GetSpaceAtPoint(pos, phase);
+                }
+
+                if (lvl == null)
                 {
                     var lvPAram = elm.get_Parameter(BuiltInParameter.RBS_START_LEVEL_PARAM);
                     if (lvPAram != null)
                     {
                         lvl = doc.GetElement(lvPAram.AsElementId()) as Level;
-                        if (lvl != null)
-                        {
-                            var lvPs = new XYZ(pos.X, pos.Y, lvl.ProjectElevation + 1);
-                            sp = elm.Document.GetSpaceAtPoint(lvPs, phase);
-                        }
                     }
                 }
                 
 
-                if (sp == null)
+                if (lvl == null)
                 {
                     var lvPAram = elm.get_Parameter(BuiltInParameter.SCHEDULE_LEVEL_PARAM);
                     if (lvPAram != null)
                     {
                         lvl = doc.GetElement(lvPAram.AsElementId()) as Level;
-                        if (lvl != null)
-                        {
-                            var lvPs = new XYZ(pos.X, pos.Y, lvl.ProjectElevation + 1);
-                            sp = elm.Document.GetSpaceAtPoint(lvPs, phase);
-                        }
                     }
                 }
 
+                if (lvl == null && sp != null)
+                {
+                    lvl = sp.Level;
+                }
+
+                if (lvl == null)
+                {
+                    lvl = doc.GetElement(fi.LevelId) as Level;
+                }
+
+                //check around element for a space
+                double chDistance = 3.28084; //3.28084 = 1m
+
                 if (sp == null)
                 {
                     var hxOrt = fi.HandOrientation.Normalize().Negate();
-                    pos = org + hxOrt.Multiply(1.64042); //stub is 1.64042 feet (0.5 meters)
+                    pos = org + hxOrt.Multiply(-chDistance);
+                    sp = elm.Document.GetSpaceAtPoint(pos, phase);
+                }
+
+
+                if (sp == null)
+                {
+                    var hxOrt = fi.HandOrientation.Normalize().Negate();
+                    pos = org + hxOrt.Multiply(chDistance);
                     sp = elm.Document.GetSpaceAtPoint(pos, phase);
                 }
 
                 if (sp == null)
                 {
-                    var hxOrt = fi.HandOrientation.Normalize().Negate();
-                    pos = org + hxOrt.Multiply(-1.64042); //stub is 1.64042 feet (0.5 meters)
+                    var hxOrt = fi.FacingOrientation.Normalize().Negate();
+                    pos = org + hxOrt.Multiply(-chDistance);
                     sp = elm.Document.GetSpaceAtPoint(pos, phase);
                 }
 
+                if (sp == null)
+                {
+                    var hxOrt = fi.FacingOrientation.Normalize().Negate();
+                    pos = org + hxOrt.Multiply(chDistance);
+                    sp = elm.Document.GetSpaceAtPoint(pos, phase);
+                }
 
                 if (sp == null)
                 {
-                    pos = org + new XYZ(0, 0, -4);
+                    pos = org + new XYZ(0, 0, -chDistance);
                     sp = elm.Document.GetSpaceAtPoint(pos, phase);
+                }
+
+                if (sp != null && sp.Level != null)
+                {
+                    lvl = sp.Level;
+                }
+
+                if (sp == null && lvl != null)
+                {
+                    var lvPs = new XYZ(pos.X, pos.Y, lvl.ProjectElevation + 2);
+                    sp = elm.Document.GetSpaceAtPoint(lvPs, phase);
                 }
 
                 if (sp != null)
@@ -502,7 +558,7 @@ namespace HLApps.Revit.Graph.Parsers
 
                 if (lvl != null)
                 {
-                    graph.AddConnection(elm, lvl, MEPPathConnectionType.Proximity, MEPGraph.Model.MEPEdgeTypes.IS_ON);
+                    gpNode.LevelId = lvl.Id.IntegerValue;
                 }
             }
 

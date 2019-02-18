@@ -16,11 +16,11 @@
  </Target>
   
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'RV2018Debug|x64'">
-    <PostBuildEvent>xcopy /y "$(TargetDir)*.dll" "C:\ProgramData\Autodesk\Revit\Addins\2018\HLApps.Revit\"</PostBuildEvent>
+    <PostBuildEvent>xcopy /y "*.dll" "C:\ProgramData\Autodesk\Revit\Addins\2018\HLApps.Revit\"</PostBuildEvent>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'RV2019Debug|x64'">
-    <PostBuildEvent>xcopy /y "$(TargetDir)*.dll" "C:\ProgramData\Autodesk\Revit\Addins\2019\HLApps.Revit\"</PostBuildEvent>
+    <PostBuildEvent>xcopy /y "*.dll" "C:\ProgramData\Autodesk\Revit\Addins\2019\HLApps.Revit\"</PostBuildEvent>
   </PropertyGroup>
     
 

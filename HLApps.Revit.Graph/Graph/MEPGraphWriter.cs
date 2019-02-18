@@ -20,11 +20,11 @@ namespace HLApps.Revit.Graph
         public void Write(MEPRevitGraph mepGraph, Autodesk.Revit.DB.Document rootDoc)
         {
 
-            var track = new Dictionary<MEPRevitNode, long>();
+            var track = new Dictionary<MEPRevitNode, PendingNode>();
 
-            var models = new Dictionary<string, long>();
-            var types = new Dictionary<string, long>();
-            var levels = new Dictionary<string, long>();
+            var models = new Dictionary<string, PendingNode>();
+            var types = new Dictionary<string, PendingNode>();
+            var levels = new Dictionary<string, PendingNode>();
 
             var rootModelNode = new RevitModel();
             var rootModelIdent = DocUtils.GetDocumentIdent(rootDoc);
@@ -68,7 +68,7 @@ namespace HLApps.Revit.Graph
                     _gdbClient.Relate(atid, elmid, MEPEdgeTypes.REALIZED_BY, null);
 
 
-                    var modelId = 0L;
+                    PendingNode modelId = null;
                     //create up model nodes
                     if (models.ContainsKey(mepNode.OrginDocIdent))
                     {
@@ -149,7 +149,7 @@ namespace HLApps.Revit.Graph
                     //create type nodes
                     if (typeElm != null)
                     {
-                        var tsId = 0L;
+                        PendingNode tsId = null;
                         if (!types.ContainsKey(typeElm.UniqueId))
                         {
                             var edgeProps = MEPGraphUtils.GetEdgeProps(typeElm);
@@ -181,7 +181,7 @@ namespace HLApps.Revit.Graph
                     if (lvl != null)
                     {
                         var edgeProps = MEPGraphUtils.GetEdgeProps(lvl);
-                        var lvlId = 0L;
+                        PendingNode lvlId = null;
                         if (!levels.ContainsKey(lvl.UniqueId))
                         {
                             var lvlNode = new Level();
@@ -261,7 +261,7 @@ namespace HLApps.Revit.Graph
                 var typeElm = rootDoc.GetElement(stypeId);
                 if (typeElm != null)
                 {
-                    var tsId = 0L;
+                    PendingNode tsId = null;
                     if (!types.ContainsKey(typeElm.UniqueId))
                     {
                         var stypeedgeProps = MEPGraphUtils.GetEdgeProps(typeElm);
@@ -300,7 +300,10 @@ namespace HLApps.Revit.Graph
                 }
 
             }
-      
+
+            _gdbClient.Commit();
+
+
         }
 
         

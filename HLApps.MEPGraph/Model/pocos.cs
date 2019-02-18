@@ -143,6 +143,12 @@ namespace HLApps.MEPGraph.Model
     {
 
     }
+
+    public class Fixture : Accessory
+    {
+
+    }
+
     public class Equipment : Node
     {
 
@@ -196,6 +202,11 @@ namespace HLApps.MEPGraph.Model
     }
 
     public class Safety : Node
+    {
+
+    }
+
+    public class Communications : Node
     {
 
     }

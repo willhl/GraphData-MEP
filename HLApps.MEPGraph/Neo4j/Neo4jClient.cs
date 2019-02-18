@@ -6,6 +6,8 @@ using Neo4j.Driver.V1;
 
 namespace HLApps.MEPGraph
 {
+
+
     public class Neo4jClient : IDisposable, IGraphDBClient
     {
 
@@ -13,6 +15,27 @@ namespace HLApps.MEPGraph
         public Neo4jClient(Uri host, string userName, string password)
         {
             _driver = GraphDatabase.Driver(host, AuthTokens.Basic(userName, password));
+        }
+
+        HashSet<string> constrained = new HashSet<string>();
+        Queue<PendingCypher> commitStack = new Queue<PendingCypher>();
+        public void Commit()
+        {
+            using (var session = _driver.Session())
+            {
+                while (commitStack.Count > 0)
+                {
+                    var pendingQuery = commitStack.Dequeue();
+                    var wtxResult = session.WriteTransaction(tx =>
+                    {
+                        var result = pendingQuery.Props != null && pendingQuery.Props.Count > 0 ? tx.Run(pendingQuery.Query, pendingQuery.Props) : tx.Run(pendingQuery.Query);
+                        return result;
+                    });
+
+                    pendingQuery.Committed?.Invoke(wtxResult);
+                }
+            }
+
         }
 
         /// <summary>
@@ -24,98 +47,111 @@ namespace HLApps.MEPGraph
         /// <param name="toNodeId"></param>
         /// <param name="relType"></param>
         /// <param name="variables"></param>
-        public void Relate(long fromNodeId, long toNodeId, Model.MEPEdgeTypes relType, Dictionary<string, object> variables)
+        public void Relate(PendingNode fromNodeId, PendingNode toNodeId, Model.MEPEdgeTypes relType, Dictionary<string, object> variables)
         {
             Dictionary<string, object> props = new Dictionary<string, object>();
-            props.Add("auid", fromNodeId);
-            props.Add("buid", toNodeId);
+            props.Add("frid", fromNodeId.TempId);
+            props.Add("toid", toNodeId.TempId);
 
             string query = string.Empty;
             if (variables != null && variables.Count > 0)
             {
                 props.Add("cvar", variables);
                 query =
-                    "MATCH(a),(b)" +
-                    "WHERE ID(a) = $auid AND ID(b) = $buid " +
-                    string.Format("CREATE (a)-[r: {0} $cvar]->(b) ", relType);
+                    string.Format("MATCH(a: {0} {{TempId: $frid}}),(b:{1} {{TempId: $toid}})", fromNodeId.Node.Label, toNodeId.Node.Label) +
+                    string.Format("CREATE (a)-[r:{0} $cvar]->(b) ", relType);
             }
             else
             {
                 query =
-                    "MATCH(a),(b)" +
-                    "WHERE ID(a) = $auid AND ID(b) = $buid " +
-                    string.Format("CREATE (a)-[r: {0}]->(b) ", relType);
+                    string.Format("MATCH(a: {0} {{TempId: $frid}}),(b:{1} {{TempId: $toid}})", fromNodeId.Node.Label, toNodeId.Node.Label) +
+                    string.Format("CREATE (a)-[r:{0}]->(b) ", relType);
             }
 
+            var pec = new PendingCypher();
+            pec.Query = query;
+            pec.Props = props;
 
-            using (var session = _driver.Session())
+            pec.Committed = (IStatementResult result) =>
+             {
+                 var rs = result;
+
+             };
+
+            commitStack.Enqueue(pec);
+            /*using (var session = _driver.Session())
             {
-                var greeting = session.WriteTransaction(tx =>
+                var wtxResult = session.WriteTransaction(tx =>
                 {
                     var result = props.Count > 0 ? tx.Run(query, props) : tx.Run(query);
                     return result;
                 });
 
-                Console.WriteLine(greeting);
+                Console.WriteLine(wtxResult);
             }
-
+            */
 
         }
 
-
+       
         public void Relate(Model.Node fromNode, Model.Node toNode, string relType, Dictionary<string, object> variables)
         {
-            Dictionary<string, object> props = new Dictionary<string, object>();
-            props.Add("auid", fromNode.UniqueId);
-            props.Add("buid", toNode.UniqueId);
-
-            string query = string.Empty;
-            if (variables != null && variables.Count > 0)
-            {
-                props.Add("cvar", variables);
-                query =
-                    string.Format("MATCH(a:{0}),(b:{1})", fromNode.Label, toNode.Label) +
-                    "WHERE a.UniqueId = $auid AND b.UniqueId = $buid " +
-                    string.Format("CREATE (a)-[r: {0} $cvar]->(b) ", relType);
-            }
-            else
-            {
-                query =
-                    string.Format("MATCH(a:{0}),(b:{1})", fromNode.Label, toNode.Label) +
-                    "WHERE a.UniqueId = $auid AND b.UniqueId = $buid " +
-                    string.Format("CREATE (a)-[r: {0}]->(b) ", relType);
-            }
-
-
-            using (var session = _driver.Session())
-            {
-                var greeting = session.WriteTransaction(tx =>
-                {
-                    var result = props.Count > 0 ? tx.Run(query, props) : tx.Run(query);
-                    return result;
-                });
-
-                Console.WriteLine(greeting);
-            }
-
+          
         }
 
-        public long Push(Model.Node node, Dictionary<string, object> variables)
+
+        
+       
+        public PendingNode Push(Model.Node node, Dictionary<string, object> variables)
         {
             Dictionary<string, object> props = new Dictionary<string, object>();
             props.Add("props", variables);
+           
+            
 
+            var pendingNode = new PendingNode(node);
+            if (variables.ContainsKey(pendingNode.TempId))
+            {
+                variables.Add("TempId", pendingNode.TempId);
+            }
+            else
+            {
+                variables["TempId"] = pendingNode.TempId;
+            }
 
             var nodeLabel = node.Label;
-            var query = string.Format("CREATE (n:{0} $props) RETURN ID(n)", nodeLabel);
+            var query = string.Format("CREATE (n:{0} $props)", nodeLabel);
 
-            IStatementResult retId;
 
+            if (!constrained.Contains(nodeLabel))
+            {
+                var pecCs = new PendingCypher();
+                pecCs.Query = string.Format("CREATE CONSTRAINT ON(n:{0}) ASSERT n.TempId IS UNIQUE", nodeLabel);
+                commitStack.Enqueue(pecCs); 
+            }
+
+            var pec = new PendingCypher();
+            pec.Query = query;
+            pec.Props = props;
+            commitStack.Enqueue(pec);
+
+            /*
             using (var session = _driver.Session())
             {
+                session.WriteTransaction(tx =>
+                {
+                    //ensure id is constrained to improve performance when relating nodes
+                    if (!constrained.Contains(nodeLabel))
+                    {
+                        tx.Run(string.Format("CREATE CONSTRAINT ON(n:{0}) ASSERT n.TempId IS UNIQUE", nodeLabel));
+                        constrained.Add(nodeLabel);
+                    }
+                });
+
                 retId = session.WriteTransaction(tx =>
                 {
                     var result = props.Count > 0 ? tx.Run(query, props) : tx.Run(query);
+                    
                     return result;
                 });
 
@@ -130,12 +166,13 @@ namespace HLApps.MEPGraph
                     if (rs.Values.Count() == 1)
                     {
                         var rtval = rs.Values.First().Value;
-                        return (long)rtval;
+                        pendingNode.NodeId = (long)rtval;
                     }
                 }
-
+                pendingNode.WasCommited = true;
             }
-            return -1;
+            */
+            return pendingNode;
 
         }
 

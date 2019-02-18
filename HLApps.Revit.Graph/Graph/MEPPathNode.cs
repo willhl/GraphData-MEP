@@ -89,6 +89,7 @@ namespace HLApps.Revit.Graph
 
             if (elm.Category.Id.IntegerValue == (int)BuiltInCategory.OST_DuctAccessory) _node = new gmdl.DuctAccessory(); //_sectionType = MEPPathSectionType.Accessory;
             if (elm.Category.Id.IntegerValue == (int)BuiltInCategory.OST_PipeAccessory) _node = new gmdl.PipeAccessory(); //_sectionType = MEPPathSectionType.Accessory;
+            if (elm.Category.Id.IntegerValue == (int)BuiltInCategory.OST_PlumbingFixtures) _node = new gmdl.Fixture();
 
             if (elm.Category.Id.IntegerValue == (int)BuiltInCategory.OST_DuctCurves) _node = new gmdl.Duct(); //_sectionType = MEPPathSectionType.Section;
             if (elm.Category.Id.IntegerValue == (int)BuiltInCategory.OST_FlexDuctCurves) _node = new gmdl.Duct(); // _sectionType = MEPPathSectionType.Section;
@@ -108,6 +109,7 @@ namespace HLApps.Revit.Graph
             if (elm.Category.Id.IntegerValue == (int)BuiltInCategory.OST_Sprinklers) _node = new gmdl.Sprinkler();
             if (elm.Category.Id.IntegerValue == (int)BuiltInCategory.OST_FireAlarmDevices) _node = new gmdl.FireAlarm();
             if (elm.Category.Id.IntegerValue == (int)BuiltInCategory.OST_ElectricalCircuit) _node = new gmdl.Circuit();
+            if (elm.Category.Id.IntegerValue == (int)BuiltInCategory.OST_CommunicationDevices) _node = new gmdl.Communications();
 
             if (elm.Category.Id.IntegerValue == (int)BuiltInCategory.OST_CurtainWallPanels) _node = new gmdl.Wall();
             if (elm.Category.Id.IntegerValue == (int)BuiltInCategory.OST_Walls) _node = new gmdl.Wall();

@@ -8,7 +8,6 @@ using HLApps.Revit.Graph.UIAddin.ViewModel;
 namespace HLApps.Revit.Graph.UIAddin
 {
     [Autodesk.Revit.Attributes.Transaction(Autodesk.Revit.Attributes.TransactionMode.Manual)]
-    [Autodesk.Revit.Attributes.Regeneration(Autodesk.Revit.Attributes.RegenerationOption.Manual)]
     public class GraphAppShowCommand : IExternalCommand
     {
         public Result Execute(ExternalCommandData cmdData, ref string message, ElementSet elements)

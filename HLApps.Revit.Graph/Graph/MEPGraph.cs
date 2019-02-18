@@ -282,6 +282,7 @@ namespace HLApps.Revit.Graph
                 conn2 = tempConn1;
             }
 
+            
 
             MEPRevitNode conn1Node = AddElement(conn1.Owner);
             MEPRevitNode conn2Node = AddElement(conn2.Owner);
